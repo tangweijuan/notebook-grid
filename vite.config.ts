@@ -5,7 +5,7 @@
   import path from 'path';
 
   export default defineConfig({
-    base: '/grid-paper-generator/',
+    base: '/notebook-grid/',
     plugins: [react(), tailwindcss()],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
