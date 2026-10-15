@@ -1,12 +1,19 @@
+import { useState } from 'react';
 import { Grid2X2, Grip, AlignJustify, Tally4, Image, FileCode } from 'lucide-react';
 import { GridConfig, PaperSize, GridType } from '../App';
+import { cn } from './ui/utils';
 
 interface ControlPanelProps {
   config: GridConfig;
   updateConfig: (updates: Partial<GridConfig>) => void;
   onExportPNG: () => void;
   onExportSVG: () => void;
+  className?: string;
+  variant?: 'sidebar' | 'bottom-tabs';
 }
+
+type SectionProps = Pick<ControlPanelProps, 'config' | 'updateConfig'>;
+type ExportSectionProps = Pick<ControlPanelProps, 'onExportPNG' | 'onExportSVG'>;
 
 const paperSizes: { size: PaperSize; dimensions: string }[] = [
   { size: 'A4', dimensions: '210×297mm' },
@@ -31,12 +38,9 @@ const presetGridColors = [
   { color: '#000000', label: '黑色' },
 ];
 
-export function ControlPanel({ config, updateConfig, onExportPNG, onExportSVG }: ControlPanelProps) {
+export function Logo({ size = 40 }: { size?: number }) {
   return (
-    <div className="w-80 bg-slate-50 border-r border-slate-200 p-4 overflow-y-auto shadow-sm">
-      {/* App Title */}
-      <div className="mb-6 flex items-center gap-3">
-        <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
+        <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
           <g clipPath="url(#clip0_35_22)">
             <rect width="64" height="64" rx="10" fill="url(#paint0_linear_35_22)"/>
             <g filter="url(#filter0_ddi_35_22)">
@@ -148,13 +152,23 @@ export function ControlPanel({ config, updateConfig, onExportPNG, onExportSVG }:
             </clipPath>
           </defs>
         </svg>
+  );
+}
+
+function TitleSection() {
+  return (
+      <div className="mb-6 flex items-center gap-3">
+        <Logo />
         <div>
           <h1 className="text-gray-900 mb-0.5">Notebook Grid</h1>
           <p className="text-sm text-gray-500">在线网格纸生成器</p>
         </div>
       </div>
+  );
+}
 
-      {/* Paper Size */}
+function PaperSizeSection({ config, updateConfig }: SectionProps) {
+  return (
       <div className="mb-5">
         <label className="block text-gray-700 mb-2">纸张尺寸</label>
         <div className="grid grid-cols-2 gap-2">
@@ -176,8 +190,11 @@ export function ControlPanel({ config, updateConfig, onExportPNG, onExportSVG }:
           ))}
         </div>
       </div>
+  );
+}
 
-      {/* Grid Type */}
+function GridTypeSection({ config, updateConfig }: SectionProps) {
+  return (
       <div className="mb-5">
         <label className="block text-gray-700 mb-2">网格类型</label>
         <div className="grid grid-cols-2 gap-2">
@@ -197,8 +214,11 @@ export function ControlPanel({ config, updateConfig, onExportPNG, onExportSVG }:
           ))}
         </div>
       </div>
+  );
+}
 
-      {/* Grid Size */}
+function GridSizeSection({ config, updateConfig }: SectionProps) {
+  return (
       <div className="mb-5">
         <label className="block text-gray-700 mb-2">
           网格尺寸
@@ -218,8 +238,11 @@ export function ControlPanel({ config, updateConfig, onExportPNG, onExportSVG }:
           <span>30mm</span>
         </div>
       </div>
+  );
+}
 
-      {/* Grid Color */}
+function GridColorSection({ config, updateConfig }: SectionProps) {
+  return (
       <div className="mb-5">
         <label className="block text-gray-700 mb-2">网格颜色</label>
         <div className="flex gap-2 items-center mb-2">
@@ -252,8 +275,11 @@ export function ControlPanel({ config, updateConfig, onExportPNG, onExportSVG }:
           ))}
         </div>
       </div>
+  );
+}
 
-      {/* Paper Color */}
+function PaperColorSection({ config, updateConfig }: SectionProps) {
+  return (
       <div className="mb-6">
         <label className="block text-gray-700 mb-2">纸张颜色</label>
         <div className="flex gap-2 items-center">
@@ -271,8 +297,12 @@ export function ControlPanel({ config, updateConfig, onExportPNG, onExportSVG }:
           />
         </div>
       </div>
+  );
+}
 
-      {/* Export PNG Button */}
+function ExportSection({ onExportPNG, onExportSVG }: ExportSectionProps) {
+  return (
+    <>
       <div className="mb-2.5">
         <button
           onClick={onExportPNG}
@@ -283,7 +313,6 @@ export function ControlPanel({ config, updateConfig, onExportPNG, onExportSVG }:
         </button>
       </div>
 
-      {/* Export SVG Button */}
       <div className="mb-2">
         <button
           onClick={onExportSVG}
@@ -293,6 +322,69 @@ export function ControlPanel({ config, updateConfig, onExportPNG, onExportSVG }:
           导出SVG
         </button>
       </div>
+    </>
+  );
+}
+
+export function ControlPanel({ config, updateConfig, onExportPNG, onExportSVG, className, variant = 'sidebar' }: ControlPanelProps) {
+  const [activeTab, setActiveTab] = useState<'paper' | 'grid' | 'export' | null>(null);
+
+  if (variant === 'bottom-tabs') {
+    const tabs = [
+      { key: 'paper' as const, label: '纸张' },
+      { key: 'grid' as const, label: '网格' },
+      { key: 'export' as const, label: '导出' },
+    ];
+    return (
+      <div className={cn('bg-white shadow-sm flex flex-col', className)}>
+        {activeTab && (
+          <div className="overflow-y-auto max-h-[45dvh] px-4 pb-4 pt-2 border-t border-slate-200">
+            {activeTab === 'paper' && (
+              <>
+                <PaperSizeSection config={config} updateConfig={updateConfig} />
+                <PaperColorSection config={config} updateConfig={updateConfig} />
+              </>
+            )}
+            {activeTab === 'grid' && (
+              <>
+                <GridTypeSection config={config} updateConfig={updateConfig} />
+                <GridSizeSection config={config} updateConfig={updateConfig} />
+                <GridColorSection config={config} updateConfig={updateConfig} />
+              </>
+            )}
+            {activeTab === 'export' && (
+              <ExportSection onExportPNG={onExportPNG} onExportSVG={onExportSVG} />
+            )}
+          </div>
+        )}
+        <div className="grid grid-cols-3 border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
+          {tabs.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(prev => (prev === key ? null : key))}
+              className={`py-3 text-sm text-center transition-colors border-t-2 -mt-px ${
+                activeTab === key
+                  ? 'border-teal-600 text-teal-700 font-medium'
+                  : 'border-transparent text-gray-500'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn('bg-slate-50 p-4 shadow-sm', className)}>
+      <TitleSection />
+      <PaperSizeSection config={config} updateConfig={updateConfig} />
+      <GridTypeSection config={config} updateConfig={updateConfig} />
+      <GridSizeSection config={config} updateConfig={updateConfig} />
+      <GridColorSection config={config} updateConfig={updateConfig} />
+      <PaperColorSection config={config} updateConfig={updateConfig} />
+      <ExportSection onExportPNG={onExportPNG} onExportSVG={onExportSVG} />
     </div>
   );
 }

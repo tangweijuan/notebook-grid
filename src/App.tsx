@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { ControlPanel } from './components/ControlPanel';
+import { ControlPanel, Logo } from './components/ControlPanel';
 import { GridPreview } from './components/GridPreview';
 
 export type PaperSize = 'A4' | 'A5' | 'A6' | 'A7';
@@ -147,14 +147,32 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex">
-      <ControlPanel 
-        config={config} 
-        updateConfig={updateConfig} 
+    <div className="h-dvh overflow-hidden bg-slate-100 flex flex-col md:flex-row">
+      {/* Desktop / tablet: fixed sidebar */}
+      <ControlPanel
+        className="hidden md:block w-80 flex-shrink-0 border-r border-slate-200 overflow-y-auto"
+        config={config}
+        updateConfig={updateConfig}
         onExportPNG={handleExportPNG}
         onExportSVG={handleExportSVG}
       />
       <GridPreview config={config} canvasRef={canvasRef} />
+
+      {/* Mobile: top bar with logo and name */}
+      <div className="md:hidden order-first flex items-center gap-2.5 px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex-shrink-0">
+        <Logo size={28} />
+        <h1 className="text-gray-900 font-medium">Notebook Grid</h1>
+      </div>
+
+      {/* Mobile: bottom tab bar with collapsible panel */}
+      <ControlPanel
+        variant="bottom-tabs"
+        className="md:hidden flex-shrink-0"
+        config={config}
+        updateConfig={updateConfig}
+        onExportPNG={handleExportPNG}
+        onExportSVG={handleExportSVG}
+      />
     </div>
   );
 }

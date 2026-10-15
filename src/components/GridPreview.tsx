@@ -18,6 +18,64 @@ const paperDimensions: Record<string, { width: number; height: number }> = {
 export function GridPreview({ config, canvasRef }: GridPreviewProps) {
   const [zoom, setZoom] = useState(100);
   const containerRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+
+  // Ctrl/Cmd + wheel and two-finger pinch zoom (native listeners: React's are passive and cannot preventDefault)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const clampZoom = (z: number) => Math.min(200, Math.max(25, z));
+    const applyZoom = (z: number) => {
+      zoomRef.current = z;
+      setZoom(z);
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      applyZoom(clampZoom(zoomRef.current * Math.exp(-e.deltaY * 0.002)));
+    };
+
+    let pinchStartDist = 0;
+    let pinchStartZoom = 100;
+    const getDistance = (touches: TouchList) =>
+      Math.hypot(
+        touches[0].clientX - touches[1].clientX,
+        touches[0].clientY - touches[1].clientY
+      );
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        pinchStartDist = getDistance(e.touches);
+        pinchStartZoom = zoomRef.current;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinchStartDist > 0) {
+        e.preventDefault();
+        applyZoom(clampZoom(pinchStartZoom * (getDistance(e.touches) / pinchStartDist)));
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) pinchStartDist = 0;
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd);
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, []);
 
   // Calculate scale relative to A4
   const paperSizeScales: Record<string, number> = {
@@ -145,15 +203,13 @@ export function GridPreview({ config, canvasRef }: GridPreviewProps) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-gray-100 relative">
       {/* Preview Area */}
-      <div ref={containerRef} className="flex-1 p-8 overflow-auto">
+      <div ref={containerRef} className="flex-1 p-4 md:p-8 overflow-auto">
         <div className="flex items-center justify-center min-h-full">
-          <div 
-            className="bg-white shadow-lg transition-transform" 
-            style={{ 
-              maxWidth: 'min(90%, 600px)',
-              maxHeight: 'calc(100vh - 160px)',
-              width: 'fit-content',
-              height: 'fit-content',
+          <div
+            className="bg-white shadow-lg transition-transform"
+            style={{
+              width: `min(90%, 600px, calc((100dvh - 160px) * ${dimensions.width} / ${dimensions.height}))`,
+              aspectRatio: `${dimensions.width} / ${dimensions.height}`,
               transform: `scale(${effectiveZoom / 100})`,
               transformOrigin: 'center center',
             }}
@@ -161,19 +217,13 @@ export function GridPreview({ config, canvasRef }: GridPreviewProps) {
             <canvas
               ref={canvasRef}
               className="w-full h-full block"
-              style={{
-                aspectRatio: `${dimensions.width} / ${dimensions.height}`,
-                maxWidth: '600px',
-                maxHeight: 'calc(100vh - 160px)',
-                objectFit: 'contain',
-              }}
             />
           </div>
         </div>
       </div>
 
-      {/* Zoom Controls - Fixed Bottom Right */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 z-10">
+      {/* Zoom Controls - Bottom Right (desktop only; mobile uses pinch) */}
+      <div className="hidden md:flex absolute bottom-6 right-6 flex-col gap-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 z-10">
         <Button 
           variant="ghost" 
           size="icon"
